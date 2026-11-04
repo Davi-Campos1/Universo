@@ -338,6 +338,169 @@ fastify.get('/objetos', async (request, reply) => {
     return reply.code(500).send({ erro: 'Não foi possível buscar os objetos.' })
   }
 })
+// LISTAR OBJETOS DE UM UTILIZADOR ESPECÍFICO (MINHAS CRIAÇÕES)
+fastify.get('/meus-objetos/:criadorId', async (request, reply) => {
+  try {
+    const criadorId = request.params.criadorId
+
+    if (!mongoose.Types.ObjectId.isValid(criadorId)) {
+      return reply.code(400).send({ erro: 'ID de utilizador inválido.' })
+    }
+
+    const objetos = await ObjetoCeleste.find({ criadorId }).sort({ createdAt: -1 })
+    return reply.send(objetos)
+  } catch (erro) {
+    request.log.error(erro)
+    return reply.code(500).send({ erro: 'Não foi possível buscar as suas criações.' })
+  }
+})
+// APAGAR OBJETO CELESTE
+fastify.delete('/objeto/:id', async (request, reply) => {
+  try {
+    const id = request.params.id
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return reply.code(400).send({ erro: 'ID inválido.' })
+    }
+
+    const objetoApagado = await ObjetoCeleste.findByIdAndDelete(id)
+    if (!objetoApagado) {
+      return reply.code(404).send({ erro: 'Objeto não encontrado.' })
+    }
+
+    return reply.send({ mensagem: 'Objeto destruído com sucesso!' })
+  } catch (erro) {
+    request.log.error(erro)
+    return reply.code(500).send({ erro: 'Erro ao apagar o objeto.' })
+  }
+})
+// RECOMPENSA DE EXPLORAÇÃO (GANHAR PONTOS)
+fastify.post('/explorar/recompensa', async (request, reply) => {
+  try {
+    const dados = request.body || {}
+    const criadorId = texto(dados.criadorId)
+    const pontosGanho = Number(dados.pontos) || 50 // Ex: 50 pontos por escaneamento
+
+    if (!mongoose.Types.ObjectId.isValid(criadorId)) {
+      return reply.code(400).send({ erro: 'ID de utilizador inválido.' })
+    }
+
+    const usuario = await Usuario.findByIdAndUpdate(
+      criadorId,
+      { $inc: { pontos: pontosGanho } },
+      { new: true }
+    )
+
+    if (!usuario) {
+      return reply.code(404).send({ erro: 'Utilizador não encontrado.' })
+    }
+
+    return reply.send({
+      mensagem: 'Recompensa coletada com sucesso!',
+      pontosRestantes: usuario.pontos,
+      pontosGanho
+    })
+  } catch (erro) {
+    request.log.error(erro)
+    return reply.code(500).send({ erro: 'Erro ao processar recompensa.' })
+  }
+})
+
+// REGISTAR CURTIDA E RECOMPENSAR O CRIADOR
+fastify.post('/objeto/curtir', async (request, reply) => {
+  try {
+    const { objetoId, usuarioId } = request.body || {}
+
+    if (!mongoose.Types.ObjectId.isValid(objetoId) || !mongoose.Types.ObjectId.isValid(usuarioId)) {
+      return reply.code(400).send({ erro: 'IDs inválidos.' })
+    }
+
+    const objeto = await ObjetoCeleste.findById(objetoId)
+    if (!objeto) {
+      return reply.code(404).send({ erro: 'Objeto não encontrado.' })
+    }
+
+    // Inicializa o array de curtidas se não existir
+    if (!objeto.curtidoPor) {
+      objeto.curtidoPor = []
+    }
+
+    // Verifica se o utilizador já curtiu este objeto
+    if (objeto.curtidoPor.includes(usuarioId)) {
+      return reply.code(400).send({ erro: 'Você já curtiu este corpo celeste.' })
+    }
+
+    // O criador do objeto não pode curtir o seu próprio objeto para ganhar pontos
+    if (objeto.criadorId.toString() === usuarioId) {
+      return reply.code(400).send({ erro: 'Não pode curtir a sua própria criação.' })
+    }
+
+    // Adiciona a curtida ao objeto
+    objeto.curtidoPor.push(usuarioId)
+    objeto.curtidas = (objeto.curtidas || 0) + 1
+    await objeto.save()
+
+    // Dá pontos ao criador do objeto (ex: +25 pontos por curtida)
+    const criadorAtualizado = await Usuario.findByIdAndUpdate(
+      objeto.criadorId,
+      { $inc: { pontos: 25 } },
+      { new: true }
+    )
+
+    return reply.send({
+      mensagem: 'Objeto curtido com sucesso! O criador recebeu 25 pontos.',
+      totalCurtidas: objeto.curtidas
+    })
+  } catch (erro) {
+    request.log.error(erro)
+    return reply.code(500).send({ erro: 'Erro ao processar curtida.' })
+  }
+})
+
+// ESTATÍSTICAS E PATENTE DO PERFIL DO UTILIZADOR
+fastify.get('/usuario/estatisticas/:criadorId', async (request, reply) => {
+  try {
+    const criadorId = request.params.criadorId
+
+    if (!mongoose.Types.ObjectId.isValid(criadorId)) {
+      return reply.code(400).send({ erro: 'ID inválido.' })
+    }
+
+    let usuario = await Usuario.findById(criadorId).select('nome sobrenome email pontos patente')
+    if (!usuario) {
+      return reply.code(404).send({ erro: 'Utilizador não encontrado.' })
+    }
+
+    // Se o utilizador ainda não tiver patente, sorteia uma e guarda fixada!
+    if (!usuario.patente) {
+      const patentesPossiveis = [
+        'Comandante da Frota Alfa',
+        'Explorador do Setor Órion',
+        'Guardião de Andrômeda',
+        'Almirante do Espaço Profundo',
+        'Navegador de Supernovas',
+        'Comandante da Vanguard Estelar',
+        'Pioneiro dos Mundos Desconhecidos'
+      ]
+      const patenteSorteada = patentesPossiveis[Math.floor(Math.random() * patentesPossiveis.length)]
+      usuario.patente = patenteSorteada
+      await usuario.save()
+    }
+
+    const totalCriacoes = await ObjetoCeleste.countDocuments({ criadorId })
+
+    return reply.send({
+      nome: usuario.nome,
+      sobrenome: usuario.sobrenome,
+      email: usuario.email,
+      pontos: usuario.pontos,
+      patente: usuario.patente,
+      totalCriacoes
+    })
+  } catch (erro) {
+    request.log.error(erro)
+    return reply.code(500).send({ erro: 'Erro ao buscar estatísticas.' })
+  }
+})
 
 async function iniciarServidor() {
   try {
