@@ -3,15 +3,29 @@
 import { useUsuarioStore } from '../stores/usuario'
 import { useRouter } from 'vue-router'
 import Planeta3D from '../components/Planeta3D.vue'
+import { onMounted } from 'vue'
 
 const usuarioStore = useUsuarioStore()
 const router = useRouter()
+usuarioStore.carregarSessao()
+
+// Opcional: Atualiza os dados do utilizador do servidor ao entrar no dashboard
+onMounted(async () => {
+  if (usuarioStore.id) {
+    try {
+      // Podes criar uma rota rápida no server.js para buscar dados do utilizador ou usar o login/sessão
+      // Por agora, garantimos que o localStorage está sincronizado com a store:
+      usuarioStore.carregarSessao()
+    } catch (e) {
+      console.error('Erro ao sincronizar sessão', e)
+    }
+  }
+})
 
 const sair = () => {
   usuarioStore.sair()
   router.push('/login')
 }
-
 </script>
 
 <template>
