@@ -17,7 +17,7 @@ const objetoCelesteSchema = new mongoose.Schema({
   corAneis: { type: String, default: '#c6b7e5' },
   temAgua: { type: Boolean, default: true },
   temTerra: { type: Boolean, default: true },
-  atmosfera: { type: Boolean, default: true },
+  atmosfera: { type: Boolean, default: false },
   aneis: { type: Boolean, default: false },
 
   // Textos e descrições personalizadas
