@@ -1,78 +1,68 @@
+
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
 
-type DadosUsuario = {
-  _id?: string
-  id?: string
-  nome?: string
-  sobrenome?: string
-  email?: string
-  pontos?: number
-}
+export const useUsuarioStore = defineStore('usuario', {
+  state: () => ({
+    id: '',
+    nome: '',
+    sobrenome: '',
+    email: '',
+    pontos: 0
+  }),
 
-export const useUsuarioStore = defineStore('usuario', () => {
-  const id = ref('')
-  const nome = ref('')
-  const sobrenome = ref('')
-  const email = ref('')
-  const pontos = ref(0)
-  const estaLogado = ref(false)
+  actions: {
+    salvarSessao(usuario: {
+      _id?: string
+      id?: string
+      nome?: string
+      sobrenome?: string
+      email?: string
+      pontos?: number
+    }) {
+      localStorage.setItem('usuario', JSON.stringify(usuario))
 
-  function salvarSessao(dadosUsuario: DadosUsuario) {
-    const identificador = dadosUsuario._id || dadosUsuario.id
-    if (!identificador) {
-      throw new Error('O servidor não retornou o ID do usuário.')
-    }
+      this.id = usuario._id || usuario.id || ''
+      this.nome = usuario.nome || ''
+      this.sobrenome = usuario.sobrenome || ''
+      this.email = usuario.email || ''
+      this.pontos = usuario.pontos ?? 0
+    },
 
-    id.value = identificador
-    nome.value = dadosUsuario.nome || ''
-    sobrenome.value = dadosUsuario.sobrenome || ''
-    email.value = dadosUsuario.email || ''
-    pontos.value = dadosUsuario.pontos ?? 0
-    estaLogado.value = true
+    carregarSessao() {
+      const dados = localStorage.getItem('usuario')
 
-    localStorage.setItem('usuarioAlterra', JSON.stringify({
-      _id: identificador,
-      nome: nome.value,
-      sobrenome: sobrenome.value,
-      email: email.value,
-      pontos: pontos.value
-    }))
-  }
+      if (dados) {
+        const usuario = JSON.parse(dados)
 
-  function carregarSessao() {
-    const dadosGuardados = localStorage.getItem('usuarioAlterra')
-    if (!dadosGuardados) return
-
-    try {
-      const usuario: DadosUsuario = JSON.parse(dadosGuardados)
-      const identificador = usuario._id || usuario.id
-      if (!identificador) {
-        sair()
-        return
+        this.id = usuario._id || usuario.id || ''
+        this.nome = usuario.nome || ''
+        this.sobrenome = usuario.sobrenome || ''
+        this.email = usuario.email || ''
+        this.pontos = usuario.pontos ?? 0
       }
+    },
 
-      id.value = identificador
-      nome.value = usuario.nome || ''
-      sobrenome.value = usuario.sobrenome || ''
-      email.value = usuario.email || ''
-      pontos.value = usuario.pontos ?? 0
-      estaLogado.value = true
-    } catch (erro) {
-      console.error('Não foi possível recuperar a sessão do usuário:', erro)
-      sair()
+    atualizarPontos(novosPontos: number) {
+      this.pontos = novosPontos
+
+      const dados = localStorage.getItem('usuario')
+
+      if (dados) {
+        const usuario = JSON.parse(dados)
+        usuario.pontos = novosPontos
+
+        localStorage.setItem('usuario', JSON.stringify(usuario))
+      }
+    },
+
+    sair() {
+      this.id = ''
+      this.nome = ''
+      this.sobrenome = ''
+      this.email = ''
+      this.pontos = 0
+
+      localStorage.removeItem('usuario')
     }
   }
-
-  function sair() {
-    id.value = ''
-    nome.value = ''
-    sobrenome.value = ''
-    email.value = ''
-    pontos.value = 0
-    estaLogado.value = false
-    localStorage.removeItem('usuarioAlterra')
-  }
-
-  return { id, nome, sobrenome, email, pontos, estaLogado, salvarSessao, carregarSessao, sair }
 })
