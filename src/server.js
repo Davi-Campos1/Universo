@@ -1,21 +1,23 @@
+
 const path = require('path')
 require('dotenv').config({
-  path: path.resolve(__dirname, '../.env')
+  path: path.resolve(__dirname, '../../alterra-backend/.env')
 })
 
 const Fastify = require('fastify')
 const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
 const cors = require('@fastify/cors')
+const fastifyStatic = require('@fastify/static')
 
 const Usuario = require('./models/Usuario')
 const ObjetoCeleste = require('./models/ObjetoCeleste')
 
 const fastify = Fastify({ logger: true })
 
-// CONFIGURAÇÕES DA ECONOMIA ALTERRA
 const PONTOS_INICIAIS = 10000
 const PONTOS_TESTE = 10000
+
 const PRECOS = {
   lua: 25,
   estrela: 50,
@@ -24,6 +26,7 @@ const PRECOS = {
   atmosfera: 10,
   aneis: 13
 }
+
 const COBRANCA_ATIVA = true
 
 fastify.register(cors, {
@@ -43,7 +46,7 @@ function booleano(valor, padrao = false) {
   return padrao
 }
 
-function calcularCusto(dados, tipo, tipoPlaneta, atmosfera, aneis) {
+function calcularCusto(tipo, tipoPlaneta, atmosfera, aneis) {
   let custo = 0
   const detalhes = []
 
@@ -59,7 +62,6 @@ function calcularCusto(dados, tipo, tipoPlaneta, atmosfera, aneis) {
   }
 
   if (tipo === 'planeta') {
-    // O padrão gratuito é o planeta com água e terra (valor interno: terrestre).
     if (tipoPlaneta !== 'terrestre' && tipoPlaneta !== 'agua e terra') {
       custo += PRECOS.tipoPlaneta
       detalhes.push({ item: 'Tipo personalizado de planeta', pontos: PRECOS.tipoPlaneta })
@@ -81,11 +83,16 @@ function calcularCusto(dados, tipo, tipoPlaneta, atmosfera, aneis) {
 
 async function conectarBanco() {
   const uri = process.env.MONGO_URI
-  if (!uri) throw new Error('MONGO_URI não encontrada no arquivo .env')
+
+  if (!uri) {
+    throw new Error('MONGO_URI não encontrada no arquivo .env')
+  }
+
   await mongoose.connect(uri)
-  console.log('🟢 MongoDB conectado com sucesso!')
+  console.log('MongoDB conectado com sucesso!')
 }
 
+// SAÚDE DO SERVIDOR
 fastify.get('/health', async () => ({
   status: 'online',
   mensagem: 'Servidor ALTERRA funcionando!',
@@ -93,7 +100,7 @@ fastify.get('/health', async () => ({
   precos: PRECOS
 }))
 
-// CADASTRO: novas contas começam com 10.000 pontos durante os testes.
+// CADASTRO
 fastify.post('/cadastro', async (request, reply) => {
   try {
     const dados = request.body || {}
@@ -105,15 +112,18 @@ fastify.post('/cadastro', async (request, reply) => {
     if (!nome || !sobrenome || !email || !senha) {
       return reply.code(400).send({ erro: 'Preencha todos os campos.' })
     }
+
     if (!email.includes('@')) {
       return reply.code(400).send({ erro: 'Informe um e-mail válido.' })
     }
+
     if (senha.length < 6) {
       return reply.code(400).send({ erro: 'A senha precisa ter pelo menos 6 caracteres.' })
     }
 
-    const usuarioExistente = await Usuario.findOne({ email })
-    if (usuarioExistente) {
+    const existente = await Usuario.findOne({ email })
+
+    if (existente) {
       return reply.code(409).send({ erro: 'Este e-mail já está cadastrado.' })
     }
 
@@ -124,6 +134,7 @@ fastify.post('/cadastro', async (request, reply) => {
       senha,
       pontos: PONTOS_INICIAIS
     })
+
     await novoUsuario.save()
 
     return reply.code(201).send({
@@ -148,12 +159,8 @@ fastify.post('/login', async (request, reply) => {
     }
 
     const usuario = await Usuario.findOne({ email })
-    if (!usuario) {
-      return reply.code(401).send({ erro: 'E-mail ou senha incorretos.' })
-    }
 
-    const senhaCorreta = await bcrypt.compare(senha, usuario.senha)
-    if (!senhaCorreta) {
+    if (!usuario || !(await bcrypt.compare(senha, usuario.senha))) {
       return reply.code(401).send({ erro: 'E-mail ou senha incorretos.' })
     }
 
@@ -170,8 +177,7 @@ fastify.post('/login', async (request, reply) => {
   }
 })
 
-// ROTA TEMPORÁRIA PARA COLOCAR A CONTA DE TESTE COM 10.000 PONTOS.
-// Remover ou proteger com autenticação antes de publicar o ALTERRA.
+// PONTOS DE TESTE
 fastify.post('/teste/adicionar-pontos', async (request, reply) => {
   try {
     if (process.env.NODE_ENV === 'production') {
@@ -179,6 +185,7 @@ fastify.post('/teste/adicionar-pontos', async (request, reply) => {
     }
 
     const criadorId = texto(request.body?.criadorId)
+
     if (!mongoose.Types.ObjectId.isValid(criadorId)) {
       return reply.code(400).send({ erro: 'ID de usuário inválido.' })
     }
@@ -189,16 +196,21 @@ fastify.post('/teste/adicionar-pontos', async (request, reply) => {
       { new: true, runValidators: true }
     )
 
-    if (!usuario) return reply.code(404).send({ erro: 'Usuário não encontrado.' })
+    if (!usuario) {
+      return reply.code(404).send({ erro: 'Usuário não encontrado.' })
+    }
 
-    return reply.send({ mensagem: 'Pontos de teste atualizados!', pontos: usuario.pontos })
+    return reply.send({
+      mensagem: 'Pontos de teste atualizados!',
+      pontos: usuario.pontos
+    })
   } catch (erro) {
     request.log.error(erro)
     return reply.code(500).send({ erro: 'Não foi possível atualizar os pontos.' })
   }
 })
 
-// CRIAR OBJETO E DESCONTAR OS PONTOS NO SERVIDOR.
+// CRIAR OBJETO
 fastify.post('/criar-objeto', async (request, reply) => {
   let pontosDescontados = 0
   let usuarioIdParaEstorno = null
@@ -213,8 +225,7 @@ fastify.post('/criar-objeto', async (request, reply) => {
       return reply.code(400).send({ erro: 'Nome e tipo são obrigatórios.' })
     }
 
-    const tiposPermitidos = ['planeta', 'lua', 'estrela', 'buraco_negro']
-    if (!tiposPermitidos.includes(tipo)) {
+    if (!['planeta', 'lua', 'estrela', 'buraco_negro'].includes(tipo)) {
       return reply.code(400).send({ erro: 'Tipo de objeto inválido.' })
     }
 
@@ -224,29 +235,25 @@ fastify.post('/criar-objeto', async (request, reply) => {
 
     const tamanho = Number(dados.tamanho ?? 1.3)
     const temperatura = Number(dados.temperatura ?? 15)
+
     if (!Number.isFinite(tamanho) || tamanho <= 0) {
       return reply.code(400).send({ erro: 'O tamanho informado é inválido.' })
     }
+
     if (!Number.isFinite(temperatura)) {
       return reply.code(400).send({ erro: 'A temperatura informada é inválida.' })
     }
 
     const tipoPlaneta = texto(dados.tipoPlaneta) || 'terrestre'
-    const atmosfera = tipo === 'planeta' ? booleano(dados.atmosfera, false) : false
-    const aneis = tipo === 'planeta' ? booleano(dados.aneis, false) : false
+    const atmosfera = tipo === 'planeta' ? booleano(dados.atmosfera) : false
+    const aneis = tipo === 'planeta' ? booleano(dados.aneis) : false
     const temAgua = booleano(dados.temAgua, true)
     const temTerra = booleano(dados.temTerra, true)
 
-    const { custo, detalhes } = calcularCusto(
-      dados,
-      tipo,
-      tipoPlaneta,
-      atmosfera,
-      aneis
-    )
+    const { custo, detalhes } = calcularCusto(tipo, tipoPlaneta, atmosfera, aneis)
 
-    // Desconto atômico: duas requisições simultâneas não conseguem gastar o mesmo saldo.
     let usuario
+
     if (custo > 0) {
       usuario = await Usuario.findOneAndUpdate(
         { _id: criadorId, pontos: { $gte: custo } },
@@ -256,9 +263,11 @@ fastify.post('/criar-objeto', async (request, reply) => {
 
       if (!usuario) {
         const conta = await Usuario.findById(criadorId).select('pontos')
+
         if (!conta) {
           return reply.code(404).send({ erro: 'Usuário não encontrado. Faça login novamente.' })
         }
+
         return reply.code(400).send({
           erro: `Pontos insuficientes. Esta criação custa ${custo} pontos e seu saldo é ${conta.pontos ?? 0}.`,
           custo,
@@ -271,6 +280,7 @@ fastify.post('/criar-objeto', async (request, reply) => {
       usuarioIdParaEstorno = usuario._id
     } else {
       usuario = await Usuario.findById(criadorId)
+
       if (!usuario) {
         return reply.code(404).send({ erro: 'Usuário não encontrado. Faça login novamente.' })
       }
@@ -279,8 +289,6 @@ fastify.post('/criar-objeto', async (request, reply) => {
     const novoObjeto = new ObjetoCeleste({
       nome,
       tipo,
-      // O campo continua no banco apenas por compatibilidade com documentos antigos.
-      // O usuário não escolhe mais modos no ALTERRA.
       modo: 'livre',
       tamanho,
       temperatura,
@@ -299,8 +307,7 @@ fastify.post('/criar-objeto', async (request, reply) => {
     })
 
     await novoObjeto.save()
-
-    pontosDescontados = 0 // O objeto foi salvo; não deve haver estorno.
+    pontosDescontados = 0
 
     return reply.code(201).send({
       mensagem: 'Objeto criado com sucesso!',
@@ -311,7 +318,6 @@ fastify.post('/criar-objeto', async (request, reply) => {
       cobrancaAtiva: COBRANCA_ATIVA
     })
   } catch (erro) {
-    // Se a gravação do objeto falhar depois do desconto, devolve os pontos.
     if (pontosDescontados > 0 && usuarioIdParaEstorno) {
       try {
         await Usuario.updateOne(
@@ -319,11 +325,11 @@ fastify.post('/criar-objeto', async (request, reply) => {
           { $inc: { pontos: pontosDescontados } }
         )
       } catch (erroEstorno) {
-        request.log.error(erroEstorno, 'Falha ao devolver pontos após erro na criação')
+        request.log.error(erroEstorno)
       }
     }
 
-    request.log.error(erro, 'Erro ao criar objeto celeste')
+    request.log.error(erro)
     return reply.code(500).send({ erro: 'Erro interno ao criar o objeto no servidor.' })
   }
 })
@@ -331,39 +337,43 @@ fastify.post('/criar-objeto', async (request, reply) => {
 // LISTAR OBJETOS
 fastify.get('/objetos', async (request, reply) => {
   try {
-    const objetos = await ObjetoCeleste.find().sort({ createdAt: -1 })
+    const objetos = await ObjetoCeleste.find().sort({ criadoEm: -1 })
     return reply.send(objetos)
   } catch (erro) {
     request.log.error(erro)
     return reply.code(500).send({ erro: 'Não foi possível buscar os objetos.' })
   }
 })
-// LISTAR OBJETOS DE UM UTILIZADOR ESPECÍFICO (MINHAS CRIAÇÕES)
+
+// MINHAS CRIAÇÕES
 fastify.get('/meus-objetos/:criadorId', async (request, reply) => {
   try {
-    const criadorId = request.params.criadorId
+    const { criadorId } = request.params
 
     if (!mongoose.Types.ObjectId.isValid(criadorId)) {
       return reply.code(400).send({ erro: 'ID de utilizador inválido.' })
     }
 
-    const objetos = await ObjetoCeleste.find({ criadorId }).sort({ createdAt: -1 })
+    const objetos = await ObjetoCeleste.find({ criadorId }).sort({ criadoEm: -1 })
     return reply.send(objetos)
   } catch (erro) {
     request.log.error(erro)
     return reply.code(500).send({ erro: 'Não foi possível buscar as suas criações.' })
   }
 })
-// APAGAR OBJETO CELESTE
+
+// APAGAR OBJETO
 fastify.delete('/objeto/:id', async (request, reply) => {
   try {
-    const id = request.params.id
+    const { id } = request.params
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return reply.code(400).send({ erro: 'ID inválido.' })
     }
 
-    const objetoApagado = await ObjetoCeleste.findByIdAndDelete(id)
-    if (!objetoApagado) {
+    const objeto = await ObjetoCeleste.findByIdAndDelete(id)
+
+    if (!objeto) {
       return reply.code(404).send({ erro: 'Objeto não encontrado.' })
     }
 
@@ -373,15 +383,20 @@ fastify.delete('/objeto/:id', async (request, reply) => {
     return reply.code(500).send({ erro: 'Erro ao apagar o objeto.' })
   }
 })
-// RECOMPENSA DE EXPLORAÇÃO (GANHAR PONTOS)
+
+// RECOMPENSA DE EXPLORAÇÃO
 fastify.post('/explorar/recompensa', async (request, reply) => {
   try {
     const dados = request.body || {}
     const criadorId = texto(dados.criadorId)
-    const pontosGanho = Number(dados.pontos) || 50 // Ex: 50 pontos por escaneamento
+    const pontosGanho = Number(dados.pontos) || 50
 
     if (!mongoose.Types.ObjectId.isValid(criadorId)) {
       return reply.code(400).send({ erro: 'ID de utilizador inválido.' })
+    }
+
+    if (!Number.isFinite(pontosGanho) || pontosGanho <= 0 || pontosGanho > 50) {
+      return reply.code(400).send({ erro: 'Recompensa inválida.' })
     }
 
     const usuario = await Usuario.findByIdAndUpdate(
@@ -405,7 +420,7 @@ fastify.post('/explorar/recompensa', async (request, reply) => {
   }
 })
 
-// REGISTAR CURTIDA E RECOMPENSAR O CRIADOR
+// CURTIR OBJETO
 fastify.post('/objeto/curtir', async (request, reply) => {
   try {
     const { objetoId, usuarioId } = request.body || {}
@@ -415,39 +430,31 @@ fastify.post('/objeto/curtir', async (request, reply) => {
     }
 
     const objeto = await ObjetoCeleste.findById(objetoId)
+
     if (!objeto) {
       return reply.code(404).send({ erro: 'Objeto não encontrado.' })
     }
 
-    // Inicializa o array de curtidas se não existir
-    if (!objeto.curtidoPor) {
-      objeto.curtidoPor = []
+    if (objeto.criadorId.toString() === usuarioId) {
+      return reply.code(400).send({ erro: 'Não pode curtir a própria criação.' })
     }
 
-    // Verifica se o utilizador já curtiu este objeto
-    if (objeto.curtidoPor.includes(usuarioId)) {
+    if (objeto.curtidoPor?.some(id => id.toString() === usuarioId)) {
       return reply.code(400).send({ erro: 'Você já curtiu este corpo celeste.' })
     }
 
-    // O criador do objeto não pode curtir o seu próprio objeto para ganhar pontos
-    if (objeto.criadorId.toString() === usuarioId) {
-      return reply.code(400).send({ erro: 'Não pode curtir a sua própria criação.' })
-    }
-
-    // Adiciona a curtida ao objeto
     objeto.curtidoPor.push(usuarioId)
     objeto.curtidas = (objeto.curtidas || 0) + 1
+
     await objeto.save()
 
-    // Dá pontos ao criador do objeto (ex: +25 pontos por curtida)
-    const criadorAtualizado = await Usuario.findByIdAndUpdate(
+    await Usuario.findByIdAndUpdate(
       objeto.criadorId,
-      { $inc: { pontos: 25 } },
-      { new: true }
+      { $inc: { pontos: 25 } }
     )
 
     return reply.send({
-      mensagem: 'Objeto curtido com sucesso! O criador recebeu 25 pontos.',
+      mensagem: 'Objeto curtido com sucesso!',
       totalCurtidas: objeto.curtidas
     })
   } catch (erro) {
@@ -456,23 +463,23 @@ fastify.post('/objeto/curtir', async (request, reply) => {
   }
 })
 
-// ESTATÍSTICAS E PATENTE DO PERFIL DO UTILIZADOR
+// ESTATÍSTICAS
 fastify.get('/usuario/estatisticas/:criadorId', async (request, reply) => {
   try {
-    const criadorId = request.params.criadorId
+    const { criadorId } = request.params
 
     if (!mongoose.Types.ObjectId.isValid(criadorId)) {
       return reply.code(400).send({ erro: 'ID inválido.' })
     }
 
-    let usuario = await Usuario.findById(criadorId).select('nome sobrenome email pontos patente')
+    const usuario = await Usuario.findById(criadorId)
+
     if (!usuario) {
       return reply.code(404).send({ erro: 'Utilizador não encontrado.' })
     }
 
-    // Se o utilizador ainda não tiver patente, sorteia uma e guarda fixada!
     if (!usuario.patente) {
-      const patentesPossiveis = [
+      const patentes = [
         'Comandante da Frota Alfa',
         'Explorador do Setor Órion',
         'Guardião de Andrômeda',
@@ -481,8 +488,8 @@ fastify.get('/usuario/estatisticas/:criadorId', async (request, reply) => {
         'Comandante da Vanguard Estelar',
         'Pioneiro dos Mundos Desconhecidos'
       ]
-      const patenteSorteada = patentesPossiveis[Math.floor(Math.random() * patentesPossiveis.length)]
-      usuario.patente = patenteSorteada
+
+      usuario.patente = patentes[Math.floor(Math.random() * patentes.length)]
       await usuario.save()
     }
 
@@ -502,12 +509,45 @@ fastify.get('/usuario/estatisticas/:criadorId', async (request, reply) => {
   }
 })
 
+// ARQUIVOS DO FRONTEND
+fastify.register(fastifyStatic, {
+  root: path.resolve(__dirname, '../../alterra-frontend/dist'),
+  prefix: '/'
+})
+
+fastify.setNotFoundHandler((request, reply) => {
+  if (
+    request.method === 'GET' &&
+    !request.url.startsWith('/health') &&
+    !request.url.startsWith('/cadastro') &&
+    !request.url.startsWith('/login') &&
+    !request.url.startsWith('/objetos') &&
+    !request.url.startsWith('/meus-objetos') &&
+    !request.url.startsWith('/usuario/') &&
+    !request.url.startsWith('/teste/') &&
+    !request.url.startsWith('/explorar/') &&
+    !request.url.startsWith('/objeto/')
+  ) {
+    return reply.sendFile('index.html')
+  }
+
+  return reply.code(404).send({ erro: 'Rota não encontrada.' })
+})
+
+// INICIAR SERVIDOR
 async function iniciarServidor() {
   try {
     await conectarBanco()
-    await fastify.listen({ port: 3000, host: '0.0.0.0' })
-    console.log('🚀 ALTERRA rodando na porta 3000!')
-    console.log('💎 Economia ativa. Preços:', PRECOS)
+
+    const port = Number(process.env.PORT) || 3000
+
+    await fastify.listen({
+      port,
+      host: '0.0.0.0'
+    })
+
+    console.log(`ALTERRA rodando na porta ${port}`)
+    console.log('Economia ativa. Preços:', PRECOS)
   } catch (erro) {
     fastify.log.error(erro)
     process.exit(1)
