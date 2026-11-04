@@ -44,13 +44,15 @@ const sair = () => {
           {{ usuarioStore.pontos }} Pontos
         </div>
 
-        <div class="usuario">
-          <div class="avatar">
-            {{ usuarioStore.nome?.charAt(0)?.toUpperCase() || 'U' }}
-          </div>
-          <span>Comandante</span>
-        </div>
 <button class="btn-acao" @click="$router.push('/criar')">Criar Novo Planeta</button>
+<button class="btn-acao" @click="$router.push('/minhas-criacoes')">Minhas Criações</button>
+<button class="btn-acao" @click="$router.push('/explorar')">Explorar Universo</button>
+<div class="usuario" @click="$router.push('/perfil')" style="cursor: pointer;" title="Ver Perfil de Comandante">
+  <div class="avatar">
+    {{ usuarioStore.nome?.charAt(0)?.toUpperCase() || 'U' }}
+  </div>
+  <span>Comandante</span>
+</div>
         <button class="btn-sair" @click="sair">
           ↪ &nbsp; Sair
         </button>
