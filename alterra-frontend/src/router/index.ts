@@ -12,7 +12,14 @@ const router = createRouter({
     { path: '/', name: 'cadastro', component: CadastroView },
     { path: '/login', name: 'login', component: LoginView },
     { path: '/dashboard', name: 'dashboard', component: DashboardView } ,
-    {path: '/criar',name: 'criacao',component: () => import('../views/CriacaoView.vue')}// Rota nova!
+    {path: '/criar',name: 'criacao',component: () => import('../views/CriacaoView.vue')},
+    {path: '/minhas-criacoes',name: 'minhas-criacoes',component: () => import('../views/MinhasCriacoesView.vue')},
+    {path: '/explorar',name: 'explorar',component: () => import('../views/ExplorarView.vue')},
+    {
+  path: '/perfil',
+  name: 'perfil',
+  component: () => import('../views/PerfilView.vue')
+}// Rota nova!
   ]
   
   
