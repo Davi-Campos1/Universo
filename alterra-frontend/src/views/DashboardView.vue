@@ -1,5 +1,6 @@
 
 <script setup lang="ts">
+import FundoEspacialDashboard from '../components/FundoEspacialDashboard.vue'
 import { useUsuarioStore } from '../stores/usuario'
 import { useRouter } from 'vue-router'
 import Planeta3D from '../components/Planeta3D.vue'
@@ -30,6 +31,7 @@ const sair = () => {
 
 <template>
   <div class="dashboard-container">
+    <FundoEspacialDashboard />
 
     <!-- BARRA SUPERIOR -->
     <header class="topbar">
@@ -145,7 +147,15 @@ const sair = () => {
 </template>
 
 <style scoped>
-
+.dashboard-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #05040e;
+}
 /* TELA INTEIRA: NÃO DEPENDE DO TAMANHO DO PAI */
 
 .conteudo {
@@ -726,5 +736,12 @@ const sair = () => {
 
 .btn-acao:active {
   transform: scale(0.97);
+}
+.topbar,
+.welcome,
+.planet-section,
+.info-panel {
+  position: absolute;
+  z-index: 10;
 }
 </style>

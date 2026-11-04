@@ -135,12 +135,16 @@ fastify.post('/cadastro', async (request, reply) => {
       pontos: PONTOS_INICIAIS
     })
 
-    await novoUsuario.save()
+   await novoUsuario.save()
 
-    return reply.code(201).send({
-      mensagem: 'Cadastro realizado com sucesso!',
-      pontosIniciais: PONTOS_INICIAIS
-    })
+const usuarioSeguro = novoUsuario.toObject()
+delete usuarioSeguro.senha
+
+return reply.code(201).send({
+  mensagem: 'Cadastro realizado com sucesso!',
+  usuario: usuarioSeguro,
+  pontosIniciais: PONTOS_INICIAIS
+})
   } catch (erro) {
     request.log.error(erro)
     return reply.code(500).send({ erro: 'Não foi possível realizar o cadastro.' })
