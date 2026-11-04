@@ -84,7 +84,7 @@ const criarTexturaPlaneta = () => {
   const ctx = canvas.getContext('2d')!
 
   if (props.tipoPlaneta === 'gasoso') {
-    // Faixas horizontais para representar as camadas de nuvens de um gigante gasoso.
+    // Faixas atmosféricas com a cor escolhida pelo usuário.
     ctx.fillStyle = props.corBase
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -122,8 +122,10 @@ const criarTexturaPlaneta = () => {
       ctx.fill()
     }
   } else {
-    // Planeta terrestre: água e continentes são controlados separadamente.
-    ctx.fillStyle = props.temAgua ? props.corAgua : props.corTerra
+    // Planeta terrestre: água e continentes usam as cores escolhidas.
+    const corAguaFinal = props.corAgua
+    const corTerraFinal = props.corTerra
+    ctx.fillStyle = props.temAgua ? corAguaFinal : corTerraFinal
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
     if (props.temTerra) {
@@ -134,7 +136,7 @@ const criarTexturaPlaneta = () => {
         [650, 800, 110, 60]
       ]
 
-      ctx.fillStyle = props.corTerra
+      ctx.fillStyle = corTerraFinal
       for (const [x, y, largura, altura] of continentes) {
         ctx.beginPath()
         const pontos = 28
@@ -544,26 +546,11 @@ watch(
     props.tamanho,
     props.atmosfera,
     props.aneis,
-    props.tipo
+    props.tipo,
+    props.temperatura
   ],
   () => {
     criarObjeto()
-  }
-)
-
-watch(
-  () => props.temperatura,
-  (temperatura) => {
-    if (!objetoMesh || !(objetoMesh.material instanceof THREE.MeshStandardMaterial)) return
-
-    objetoMesh.material.color.set(
-      temperatura <= 0
-        ? '#b9d9ff'
-        : temperatura >= 100
-          ? '#ff9b70'
-          : '#ffffff'
-    )
-    objetoMesh.material.needsUpdate = true
   }
 )
 
