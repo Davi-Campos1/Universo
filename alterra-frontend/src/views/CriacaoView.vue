@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -8,9 +7,11 @@ import { useUsuarioStore } from '../stores/usuario'
 const router = useRouter()
 const usuarioStore = useUsuarioStore()
 
+// Carregar a sessão para identificar o criador da publicação
+usuarioStore.carregarSessao()
+
 const nome = ref('')
 const tipo = ref('planeta')
-const modo = ref('livre')
 const tamanho = ref(1.3)
 const temperaturaCelsius = ref(15)
 
@@ -23,7 +24,42 @@ const temAgua = ref(true)
 const temTerra = ref(true)
 const descricao = ref('')
 
-const curiosidade = computed(() => {
+const atmosfera = ref(false)
+const aneis = ref(false)
+
+const mensagemErro = ref('')
+const mensagemSucesso = ref('')
+const carregando = ref(false)
+
+// Preços oficiais da economia ALTERRA (IGUAIS ao server.js).
+const PRECOS = {
+  lua: 25,
+  estrela: 50,
+  buraco_negro: 100, // Corrigido para buraco_negro
+  tipoPlaneta: 5,
+  atmosfera: 10,
+  aneis: 13
+}
+
+const custoCalculado = computed(() => {
+  let custo = 0
+
+  if (tipo.value === 'lua') custo += PRECOS.lua
+  if (tipo.value === 'estrela') custo += PRECOS.estrela
+  if (tipo.value === 'buraco_negro') custo += PRECOS.buraco_negro // Corrigido
+
+  if (tipo.value === 'planeta') {
+    if (tipoPlaneta.value !== 'terrestre' && tipoPlaneta.value !== 'agua e terra') {
+      custo += PRECOS.tipoPlaneta
+    }
+    if (atmosfera.value) custo += PRECOS.atmosfera
+    if (aneis.value) custo += PRECOS.aneis
+  }
+
+  return custo
+})
+
+const obterCuriosidade = () => {
   const curiosidades: Record<string, string> = {
     planeta: 'Um planeta pode ter composição rochosa, gasosa ou gelada. A temperatura, a atmosfera e a distância da estrela influenciam suas condições.',
     estrela: 'Estrelas produzem energia por fusão nuclear em seu núcleo, transformando elementos leves em outros mais pesados.',
@@ -31,14 +67,7 @@ const curiosidade = computed(() => {
     buraco_negro: 'A gravidade de um buraco negro é tão intensa que, depois de cruzar o horizonte de eventos, nem mesmo a luz consegue escapar.'
   }
   return curiosidades[tipo.value] || curiosidades.planeta
-})
-
-const atmosfera = ref(true)
-const aneis = ref(false)
-
-const mensagemErro = ref('')
-const mensagemSucesso = ref('')
-const carregando = ref(false)
+}
 
 watch(tipo, (novoTipo) => {
   if (novoTipo === 'estrela') corBase.value = '#ffbd59'
@@ -47,9 +76,6 @@ watch(tipo, (novoTipo) => {
   if (novoTipo === 'planeta') corBase.value = '#3b82f6'
 })
 
-
-
-// Dentro da função criarObjeto:
 const criarObjeto = async () => {
   mensagemErro.value = ''
   mensagemSucesso.value = ''
@@ -59,12 +85,15 @@ const criarObjeto = async () => {
     return
   }
 
-  // Recupera a sessão e usa o ID real retornado pelo backend.
-  usuarioStore.carregarSessao()
   const criadorId = usuarioStore.id
 
   if (!criadorId) {
     mensagemErro.value = 'Sua sessão não possui um identificador válido. Saia da conta e entre novamente.'
+    return
+  }
+
+  if (usuarioStore.pontos < custoCalculado.value) {
+    mensagemErro.value = `Pontos insuficientes. Esta criação custa ${custoCalculado.value} pontos e você tem ${usuarioStore.pontos}.`
     return
   }
 
@@ -77,7 +106,6 @@ const criarObjeto = async () => {
       body: JSON.stringify({
         nome: nome.value.trim(),
         tipo: tipo.value,
-        modo: modo.value,
         tamanho: Number(tamanho.value),
         temperatura: Number(temperaturaCelsius.value),
         corBase: corBase.value,
@@ -88,20 +116,24 @@ const criarObjeto = async () => {
         temAgua: temAgua.value,
         temTerra: temTerra.value,
         descricao: descricao.value.trim(),
-        curiosidade: curiosidade.value,
+        curiosidade: obterCuriosidade(),
         atmosfera: atmosfera.value,
         aneis: aneis.value,
         criadorId
       })
     })
-
-    const dados = await resposta.json()
+const dados = await resposta.json()
 
     if (!resposta.ok) {
       throw new Error(dados.erro || 'Erro ao criar o objeto.')
     }
 
-    mensagemSucesso.value = 'Corpo celeste criado com sucesso!'
+    // Isto é o que força a store e o localStorage a atualizarem os pontos imediatamente!
+    if (dados.pontosRestantes !== undefined) {
+      usuarioStore.atualizarPontos(dados.pontosRestantes)
+    }
+
+    mensagemSucesso.value = `Corpo celeste criado com sucesso! Foram descontados ${dados.custo} pontos.`
 
     setTimeout(() => router.push('/dashboard'), 1500)
   } catch (erro: any) {
@@ -151,6 +183,18 @@ const voltarDashboard = () => router.push('/dashboard')
         </button>
       </header>
 
+      <div class="painel-pontos" aria-label="Resumo de pontos da criação">
+        <div class="pontos-item">
+          <span class="pontos-legenda">Saldo disponível</span>
+          <strong>{{ usuarioStore.pontos.toLocaleString('pt-BR') }} <small>pts</small></strong>
+        </div>
+        <span class="pontos-separador" aria-hidden="true"></span>
+        <div class="pontos-item custo-atual">
+          <span class="pontos-legenda">Esta criação</span>
+          <strong>{{ custoCalculado.toLocaleString('pt-BR') }} <small>pts</small></strong>
+        </div>
+      </div>
+
       <p class="subtitulo">
         Configure seu objeto celeste e acompanhe sua criação em tempo real.
       </p>
@@ -169,24 +213,14 @@ const voltarDashboard = () => router.push('/dashboard')
           />
         </div>
 
-        <div class="grid-duplo">
-          <div class="input-group">
-            <label for="tipo">Tipo de objeto</label>
-            <select id="tipo" v-model="tipo">
-              <option value="planeta">Planeta</option>
-              <option value="estrela">Estrela</option>
-              <option value="lua">Lua</option>
-              <option value="buraco_negro">Buraco Negro</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label for="modo">Modo</label>
-            <select id="modo" v-model="modo">
-              <option value="livre">Livre</option>
-              <option value="cientifico">Científico</option>
-            </select>
-          </div>
+        <div class="input-group">
+          <label for="tipo">Tipo de objeto</label>
+          <select id="tipo" v-model="tipo">
+            <option value="planeta">Planeta</option>
+            <option value="estrela">Estrela (50 pontos)</option>
+            <option value="lua">Lua (25 pontos)</option>
+            <option value="buraco_negro">Buraco Negro (100 pontos)</option>
+          </select>
         </div>
 
         <div v-if="tipo === 'planeta'" class="grupo-personalizacao">
@@ -195,15 +229,15 @@ const voltarDashboard = () => router.push('/dashboard')
           </div>
 
           <div class="input-group">
-            <label for="tipo-planeta">Modelo de planeta</label>
+            <label for="tipo-planeta">Tipo de planeta (5 pontos se diferente do padrão)</label>
             <select id="tipo-planeta" v-model="tipoPlaneta">
-              <option value="terrestre">Com água e terra</option>
-              <option value="rochoso">Rochoso / craterado</option>
-              <option value="gasoso">Gasoso / faixas de nuvens</option>
+              <option value="terrestre">Com água e terra (grátis)</option>
+              <option value="rochoso">Rochoso / craterado (5 pontos)</option>
+              <option value="gasoso">Gasoso / faixas de nuvens (5 pontos)</option>
             </select>
           </div>
 
-          <div v-if="tipoPlaneta === 'terrestre'" class="grid-duplo">
+          <div v-if="tipoPlaneta === 'terrestre' || tipoPlaneta === 'agua e terra'" class="grid-duplo">
             <div class="input-group">
               <label>Cor da água</label>
               <div class="seletor-cor">
@@ -245,12 +279,12 @@ const voltarDashboard = () => router.push('/dashboard')
 
           <label class="opcao-check">
             <input type="checkbox" v-model="atmosfera" />
-            <span>Atmosfera e nuvens</span>
+            <span>Atmosfera e nuvens (10 pontos)</span>
           </label>
 
           <label class="opcao-check">
             <input type="checkbox" v-model="aneis" />
-            <span>Adicionar anéis ao planeta</span>
+            <span>Adicionar anéis ao planeta (13 pontos)</span>
           </label>
 
           <div v-if="aneis" class="input-group">
@@ -283,7 +317,7 @@ const voltarDashboard = () => router.push('/dashboard')
           <input
             type="range"
             v-model.number="tamanho"
-            min="0.8"
+            min="0.1"
             max="1.8"
             step="0.1"
             class="range-input"
@@ -332,8 +366,8 @@ const voltarDashboard = () => router.push('/dashboard')
 
         <section class="curiosidade-box">
           <span class="curiosidade-tag">✦ VOCÊ SABIA?</span>
-          <p>{{ curiosidade }}</p>
-          <small>Curiosidade científica relacionada ao tipo de objeto selecionado.</small>
+          <p>{{ obterCuriosidade() }}</p>
+          <small>Informação relacionada ao tipo de objeto selecionado.</small>
         </section>
 
         <p v-if="mensagemErro" class="mensagem erro">{{ mensagemErro }}</p>
@@ -460,11 +494,65 @@ const voltarDashboard = () => router.push('/dashboard')
   font-size: 21px;
 }
 
+.painel-pontos {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+  gap: 14px;
+  margin: 17px 0 12px;
+  padding: 11px 13px;
+  background: rgba(21, 16, 43, 0.62);
+  border: 1px solid rgba(170, 130, 255, 0.18);
+  border-radius: 10px;
+}
+
+.pontos-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.pontos-legenda {
+  color: #9689b2;
+  font-size: 10px;
+  letter-spacing: 0.25px;
+  text-transform: none;
+}
+
+.pontos-item strong {
+  color: #e9ddff;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pontos-item strong small {
+  color: #a99acb;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.pontos-separador {
+  width: 1px;
+  height: 30px;
+  background: rgba(170, 130, 255, 0.2);
+}
+
+.custo-atual {
+  text-align: right;
+}
+
+.custo-atual strong {
+  color: #c4a5ff;
+}
+
 .subtitulo {
   color: #aaa0c5;
   font-size: 12px;
   line-height: 1.6;
-  margin: 12px 0 20px;
+  margin: 10px 0 15px;
 }
 
 .form-editor {
@@ -525,11 +613,6 @@ const voltarDashboard = () => router.push('/dashboard')
   line-height: 1.5;
 }
 
-.input-group textarea:focus {
-  border-color: #a78bfa;
-  box-shadow: 0 0 0 3px rgba(167,139,250,0.1);
-}
-
 .curiosidade-box {
   padding: 13px;
   border: 1px solid rgba(167,139,250,0.25);
@@ -554,6 +637,11 @@ const voltarDashboard = () => router.push('/dashboard')
 .curiosidade-box small {
   color: #8f85a7;
   font-size: 9px;
+}
+
+@media (max-width: 420px) {
+  .painel-pontos { gap: 9px; padding: 10px; }
+  .pontos-item strong { font-size: 14px; }
 }
 
 .grid-duplo {
