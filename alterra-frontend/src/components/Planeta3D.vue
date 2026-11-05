@@ -75,7 +75,7 @@ const terminarArraste = () => {
 
 // O objeto fica deslocado para a direita.
 // A câmera e os controles olham para o centro da tela.
-const posicaoObjeto = new THREE.Vector3(props.deslocamentoX, 0, 0)
+
 
 const criarTexturaPlaneta = () => {
   const canvas = document.createElement('canvas')
@@ -302,7 +302,13 @@ const criarObjeto = () => {
   limparObjeto()
 
   objetoGrupo = new THREE.Group()
-  objetoGrupo.position.copy(posicaoObjeto)
+  objetoGrupo.position.set(
+  containerRef.value && containerRef.value.clientWidth <= 700
+    ? 0
+    : props.deslocamentoX,
+  0,
+  0
+)
 
   const raio = props.tipo === 'lua'
     ? props.tamanho * 0.65
@@ -473,6 +479,11 @@ onMounted(() => {
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(container.clientWidth, container.clientHeight)
+  if (objetoGrupo) {
+  objetoGrupo.position.x = container.clientWidth <= 700
+    ? 0
+    : props.deslocamentoX
+}
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.NoToneMapping
 
