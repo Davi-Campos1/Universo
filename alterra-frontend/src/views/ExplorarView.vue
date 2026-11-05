@@ -359,4 +359,166 @@ onMounted(() => {
 .btn-curtir { width: 100%; padding: 9px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; color: #f87171; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s; }
 .btn-curtir:hover:not(:disabled) { background: rgba(239, 68, 68, 0.3); }
 .btn-curtir:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ========================================
+   ALTERRA - ADAPTAÇÃO PARA CELULAR
+======================================== */
+
+@media (max-width: 768px) {
+
+  .explorar-container {
+    min-height: 100vh;
+    padding-bottom: 30px;
+  }
+
+  /* Cabeçalho */
+  .topbar {
+    padding: 15px 18px;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .logo {
+    font-size: 17px;
+    letter-spacing: 3px;
+  }
+
+  .topbar-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .pontos {
+    font-size: 13px;
+  }
+
+  .btn-voltar {
+    padding: 10px 14px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+
+  /* Conteúdo principal */
+  .conteudo-explorar {
+    width: 100%;
+    margin: 24px auto 0;
+    padding: 0 14px;
+    gap: 20px;
+  }
+
+  /* Banner de exploração */
+  .banner-exploracao {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .banner-exploracao h2 {
+    font-size: 21px;
+    line-height: 1.3;
+  }
+
+  .banner-exploracao p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .btn-escanear {
+    width: 100%;
+    min-height: 46px;
+    padding: 12px;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  /* Título da exploração */
+  .titulo-feed h3 {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Mensagens */
+  .estado-mensagem {
+    padding: 25px 16px;
+    font-size: 13px;
+  }
+
+  /* Grade de planetas */
+  .grid-cartoes {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    width: 100%;
+  }
+
+  .cartao-celeste {
+    width: 100%;
+    min-width: 0;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  /* Visualização 3D */
+  .preview-3d-mini {
+    height: 190px;
+    width: 100%;
+  }
+
+  /* Informações dos planetas */
+  .cartao-corpo h3 {
+    font-size: 17px;
+  }
+
+  .descricao {
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: auto;
+    overflow-wrap: anywhere;
+  }
+
+  .detalhes-tecnicos {
+    gap: 12px;
+  }
+
+  .detalhe-item strong {
+    font-size: 13px;
+  }
+
+  /* Botão de curtir */
+  .btn-curtir {
+    min-height: 44px;
+    font-size: 13px;
+  }
+}
+
+/* Celulares com telas menores */
+@media (max-width: 380px) {
+
+  .topbar {
+    padding: 13px;
+  }
+
+  .conteudo-explorar {
+    padding: 0 10px;
+  }
+
+  .banner-exploracao {
+    padding: 16px;
+  }
+
+  .banner-exploracao h2 {
+    font-size: 19px;
+  }
+
+  .cartao-celeste {
+    padding: 13px;
+  }
+
+  .preview-3d-mini {
+    height: 165px;
+  }
+}
+
 </style>
