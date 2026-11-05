@@ -857,4 +857,140 @@ const voltarDashboard = () => router.push('/dashboard')
     display: none;
   }
 }
+/* ADAPTAÇÃO DA TELA CRIAR PLANETA PARA CELULAR */
+@media (max-width: 700px) {
+  .criacao-container {
+    width: 100%;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: 20px;
+    box-sizing: border-box;
+  }
+
+  .editor-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: calc(100% - 24px);
+    max-width: 500px;
+    max-height: none;
+    margin: 90px auto 30px;
+    padding: 18px;
+    box-sizing: border-box;
+  }
+
+  .header-editor {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .header-editor h2 {
+    font-size: 19px;
+  }
+
+  .btn-voltar {
+    flex-shrink: 0;
+  }
+
+  .painel-pontos {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .pontos-legenda {
+    font-size: 9px;
+  }
+
+  .pontos-item strong {
+    font-size: 14px;
+  }
+
+  .grid-duplo {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .grupo-personalizacao {
+    padding: 12px;
+  }
+
+  .input-group input,
+  .input-group select,
+  .input-group textarea {
+    font-size: 16px;
+  }
+
+  .range-input {
+    min-height: 25px;
+  }
+
+  .btn-criar {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 420px) {
+  .editor-card {
+    padding: 15px;
+    margin-top: 80px;
+  }
+
+  .header-editor h2 {
+    font-size: 17px;
+  }
+
+  .painel-pontos {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .pontos-item strong {
+    font-size: 13px;
+  }
+
+  .subtitulo {
+    font-size: 11px;
+  }
+}
+/* VISUALIZAÇÃO DO PLANETA ABAIXO DO EDITOR NO CELULAR */
+@media (max-width: 700px) {
+  .criacao-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .criacao-container :deep(.planet-background) {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: clamp(240px, 75vw, 330px);
+    flex-shrink: 0;
+    margin: 75px auto 5px;
+    z-index: 2;
+  }
+
+  .editor-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: calc(100% - 24px);
+    max-width: 500px;
+    max-height: none;
+    margin: 0 auto 30px;
+    padding: 18px;
+    box-sizing: border-box;
+    z-index: 10;
+  }
+
+  .indicador-preview {
+    display: none;
+  }
+}
 </style>
