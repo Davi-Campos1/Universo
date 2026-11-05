@@ -1,5 +1,6 @@
 
 <script setup lang="ts">
+import { getApiUrl } from '../services/api'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUsuarioStore } from '../stores/usuario'
@@ -18,7 +19,7 @@ usuarioStore.carregarSessao()
 
 const buscarObjetosUniverso = async () => {
   try {
-    const resposta = await fetch('http://localhost:3000/objetos')
+    const resposta = await 	fetch(getApiUrl('/objetos'))
     const dados = await resposta.json()
 
     if (!resposta.ok) {
@@ -65,7 +66,7 @@ const escanearSetor = async () => {
   }
 
   try {
-    const resposta = await fetch('http://localhost:3000/explorar/recompensa', {
+    const resposta = await fetch(getApiUrl('/explorar/recompensa'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -116,7 +117,7 @@ const curtirObjeto = async (objeto: any) => {
   }
 
   try {
-    const resposta = await fetch('http://localhost:3000/objeto/curtir', {
+    const resposta = await fetch(getApiUrl('/objeto/curtir'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

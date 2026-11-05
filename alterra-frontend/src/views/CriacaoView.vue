@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiUrl } from '../services/api'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Planeta3D from '../components/Planeta3D.vue'
@@ -100,7 +101,7 @@ const criarObjeto = async () => {
   carregando.value = true
 
   try {
-    const resposta = await fetch('http://localhost:3000/criar-objeto', {
+    const resposta = await fetch(getApiUrl('/criar-objeto'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

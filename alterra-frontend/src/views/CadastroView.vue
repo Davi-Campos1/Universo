@@ -1,5 +1,6 @@
 
 <script setup lang="ts">
+import { getApiUrl } from '../services/api'
 import FundoEspacialAuth from '../components/FundoEspacialAuth.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -20,7 +21,7 @@ const handleCadastro = async () => {
   carregando.value = true
 
   try {
-    const resposta = await fetch('/api/cadastro', {
+    const resposta = await fetch(getApiUrl('/cadastro'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

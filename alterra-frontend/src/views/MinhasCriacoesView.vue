@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiUrl } from '../services/api'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUsuarioStore } from '../stores/usuario'
@@ -23,7 +24,7 @@ const buscarMinhasCriacoes = async () => {
       return
     }
 
-    const resposta = await fetch(`http://localhost:3000/meus-objetos/${criadorId}`)
+    const resposta = await fetch(getApiUrl(`/meus-objetos/${criadorId}`))
     const dados = await resposta.json()
 
     if (!resposta.ok) {
@@ -56,7 +57,7 @@ const apagarObjeto = async (id: string) => {
   if (!confirm('Tem certeza que deseja destruir este corpo celeste do universo?')) return
 
   try {
-    const resposta = await fetch(`http://localhost:3000/objeto/${id}`, {
+    const resposta = await fetch(getApiUrl(`/objeto/${id}`), {
       method: 'DELETE'
     })
     if (!resposta.ok) throw new Error('Erro ao apagar objeto.')

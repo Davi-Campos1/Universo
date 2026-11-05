@@ -1,5 +1,6 @@
 
 <script setup lang="ts">
+import { getApiUrl } from '../services/api'
 import FundoEspacialAuth from '../components/FundoEspacialAuth.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -19,7 +20,7 @@ const handleLogin = async () => {
   carregando.value = true
 
   try {
-    const resposta = await fetch('/api/login', {
+    const resposta = await fetch(getApiUrl('/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

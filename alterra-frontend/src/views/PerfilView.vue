@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiUrl } from '../services/api'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUsuarioStore } from '../stores/usuario'
@@ -21,7 +22,7 @@ usuarioStore.carregarSessao()
 onMounted(async () => {
   try {
     if (!usuarioStore.id) return
-    const resposta = await fetch(`http://localhost:3000/usuario/estatisticas/${usuarioStore.id}`)
+    const resposta = await fetch(getApiUrl(`/usuario/estatisticas/${usuarioStore.id}`))
     const dados = await resposta.json()
     if (resposta.ok) {
       estatisticas.value = dados
