@@ -2,8 +2,9 @@ services:
   - type: web
     name: alterra-frontend
     runtime: static
-    buildCommand: cd alterra-frontend && npm install && npm run build
-    staticPublishPath: alterra-frontend/dist
+    rootDir: alterra-frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
     routes:
       - type: rewrite
         source: /*
