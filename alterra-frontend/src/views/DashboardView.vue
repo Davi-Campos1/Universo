@@ -744,4 +744,66 @@ const sair = () => {
   position: absolute;
   z-index: 10;
 }
+
+/* ADAPTAÇÃO DA NAVEGAÇÃO MOBILE */
+@media (max-width: 550px) {
+
+  .topbar {
+    height: auto;
+    min-height: 65px;
+    padding: 12px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .logo {
+    justify-content: center;
+    font-size: 17px;
+  }
+
+  .topbar-right {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .topbar-right .btn-acao {
+    padding: 10px 9px;
+    font-size: 11px;
+    white-space: normal;
+    min-height: 40px;
+  }
+
+  .topbar-right .pontos {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .usuario {
+    display: flex;
+  }
+
+  .btn-sair {
+    min-height: 40px;
+    padding: 9px 12px;
+  }
+
+  .welcome {
+    top: 25%;
+  }
+
+  .planet-section {
+    top: 44%;
+    height: 38%;
+  }
+
+  .info-panel {
+    bottom: 10px;
+  }
+}
+
 </style>
